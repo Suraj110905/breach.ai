@@ -6,6 +6,7 @@
 import sys
 from dotenv import load_dotenv
 from core.voice import speak, listen
+from core.brain import think
 
 load_dotenv()
 
@@ -20,27 +21,21 @@ def log(status, message):
     print(f"  [{symbol}] {message}")
 
 def check_environment():
-    """
-    Verifies all required environment variables exist.
-    Returns True if everything is fine, False if something is missing.
-    """
     all_good = True
 
-    # ── Check Anthropic API key ──────────────────────────────
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
-        log("ERROR", "ANTHROPIC_API_KEY not found in .env file")
-        log("INFO",  "Copy .env.example to .env and add your key")
-        log("INFO",  "Get your key: https://console.anthropic.com")
+        log("ERROR", "GEMINI_API_KEY not found in .env file")
+        log("INFO",  "Get your key: https://aistudio.google.com")
         all_good = False
 
-    elif api_key == "your_anthropic_api_key_here":
-        log("WARN",  "ANTHROPIC_API_KEY is still a placeholder — update it")
+    elif api_key == "your_gemini_api_key_here":
+        log("WARN",  "GEMINI_API_KEY is still a placeholder — update it")
         all_good = False
 
     else:
-        log("OK", "Anthropic API key loaded")
+        log("OK", "Gemini API key loaded")
 
     return all_good
 
@@ -76,6 +71,24 @@ def main():
     print("  BREACH is ready.")
     print()
     speak("BREACH online. How can I help you?")
+    # ── Conversation loop ────────────────────────────────────
+    speak("BREACH online. How can I help you?")
+
+    while True:
+        user_input = listen()
+
+        if not user_input:
+            continue   # heard nothing, listen again
+
+        # Exit commands
+        if any(word in user_input.lower() for word in ["goodbye", "bye", "exit", "quit", "shutdown"]):
+            speak("Shutting down. Goodbye.")
+            break
+
+        # Think and respond
+        log("INFO", "Thinking...")
+        response = think(user_input)
+        speak(response)
     
 if __name__ == "__main__":
     main()
