@@ -3,6 +3,7 @@
 # BREACH — Personal AI Assistant
 # main.py — Entry point / system boot
 # ============================================================import os
+import os
 import sys
 from dotenv import load_dotenv
 from core.voice import speak, listen
