@@ -5,6 +5,7 @@
 # ============================================================import os
 import sys
 from dotenv import load_dotenv
+from core.voice import speak, listen
 
 load_dotenv()
 
@@ -70,10 +71,11 @@ def main():
     # ── All systems go ───────────────────────────────────────
     print()
     log("OK",   "All systems nominal")
-    log("INFO", "Phase 1 (Voice) — coming next")
+    log("OK",   "Voice system ready")
     print()
     print("  BREACH is ready.")
     print()
+    speak("BREACH online. How can I help you?")
     
 if __name__ == "__main__":
     main()
