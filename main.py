@@ -8,6 +8,7 @@ import sys
 from dotenv import load_dotenv
 from core.voice import speak, listen
 from core.brain import think
+from core.skills_router import route
 
 load_dotenv()
 
@@ -79,7 +80,23 @@ def main():
         user_input = listen()
 
         if not user_input:
-            continue   # heard nothing, listen again
+            continue
+
+        # Exit commands
+        if any(word in user_input.lower() for word in ["goodbye", "bye", "exit", "quit", "shutdown"]):
+            speak("Shutting down. Goodbye.")
+            break
+
+        # ── Try skills first ─────────────────────────────────
+        skill_response, was_triggered = route(user_input)
+
+        if was_triggered:
+            speak(skill_response)
+        else:
+            # No skill matched — send to Gemini brain
+            log("INFO", "Thinking...")
+            response = think(user_input)
+            speak(response)
 
         # Exit commands
         if any(word in user_input.lower() for word in ["goodbye", "bye", "exit", "quit", "shutdown"]):
