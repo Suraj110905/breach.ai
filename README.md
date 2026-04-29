@@ -1,4 +1,4 @@
-# BREACH — Personal AI Assistant
+# BREACH - Personal AI Assistant
 
 BREACH is a voice-activated personal AI assistant with a modular skill system,
 long-term memory, permission-based system access, and an animated avatar UI.
