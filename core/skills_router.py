@@ -1,43 +1,45 @@
 # ============================================================
 # BREACH — core/skills_router.py
-# Reads user input and routes to the correct skill
+# Routes user input to skills — with permission check
 # ============================================================
 
 import importlib
-import os
+from core.permissions import is_allowed
 
-
-# ── Skill keyword map ────────────────────────────────────────
-# Each entry: "keyword in speech" → "skill filename in /skills"
 SKILL_MAP = {
-    "open":        "open_app",
-    "launch":      "open_app",
-    "search":      "web_search",
-    "google":      "web_search",
-    "look up":     "web_search",
-    "time":        "tell_time",
-    "date":        "tell_time",
-    "what day":    "tell_time",
+    "open":      "open_app",
+    "launch":    "open_app",
+    "search":    "web_search",
+    "google":    "web_search",
+    "look up":   "web_search",
+    "time":      "tell_time",
+    "date":      "tell_time",
+    "what day":  "tell_time",
 }
 
 
-def route(user_input):
+def route(user_input, speak_fn, listen_fn):
     """
-    Checks user_input against SKILL_MAP keywords.
-    If a match is found, loads and runs that skill.
-    Returns (skill_response, skill_was_triggered)
+    Matches user input to a skill.
+    Checks permission before running.
+    Returns (response, was_triggered)
     """
     text = user_input.lower()
 
     for keyword, skill_name in SKILL_MAP.items():
         if keyword in text:
+
+            # ── Permission check ─────────────────────────────
+            allowed = is_allowed(skill_name, speak_fn, listen_fn)
+            if not allowed:
+                return "Permission denied.", True
+
+            # ── Run the skill ────────────────────────────────
             try:
-                # Dynamically load the skill module from /skills folder
                 skill = importlib.import_module(f"skills.{skill_name}")
                 response = skill.run(user_input)
                 return response, True
             except Exception as e:
                 return f"Skill {skill_name} failed: {str(e)}", True
 
-    # No skill matched — let Gemini handle it
     return None, False

@@ -88,7 +88,7 @@ def main():
             break
 
         # ── Try skills first ─────────────────────────────────
-        skill_response, was_triggered = route(user_input)
+        skill_response, was_triggered = route(user_input, speak, listen)
 
         if was_triggered:
             speak(skill_response)

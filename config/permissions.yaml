@@ -1,0 +1,15 @@
+# ============================================================
+# BREACH Permission Config
+# ============================================================
+# allow → runs without asking
+# ask   → BREACH asks you before running
+# deny  → never runs, ever
+# ============================================================
+
+skills:
+  tell_time:   allow
+  web_search:  allow
+  open_app:    ask
+  delete_file: deny
+  send_email:  ask
+  camera:      deny
