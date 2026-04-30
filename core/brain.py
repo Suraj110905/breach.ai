@@ -1,61 +1,67 @@
 # ============================================================
 # BREACH — core/brain.py
-# The thinking engine — sends text to Gemini, returns response
+# Thinking engine with long-term memory injection
 # ============================================================
 
 import os
 import time
 import google.generativeai as genai
 from dotenv import load_dotenv
+from core.memory import recall_relevant, save_conversation, get_all_preferences
 
 load_dotenv()
 
-# ── Configure Gemini ─────────────────────────────────────────
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# ── System prompt — defines who BREACH is ───────────────────
 SYSTEM_PROMPT = """
 You are BREACH, a personal AI assistant running locally on the user's computer.
 You are sharp, efficient, and direct. You never waste words.
 You help with daily tasks, answer questions, and learn the user's preferences over time.
 Keep responses short and conversational — this is a voice assistant, not an essay writer.
 Maximum 2-3 sentences unless the user asks for detail.
+If you learn something personal about the user (name, preferences, habits), remember it.
 """
 
-# ── Load model ───────────────────────────────────────────────
 model = genai.GenerativeModel(
     model_name="gemini-2.0-flash",
     system_instruction=SYSTEM_PROMPT
 )
 
-# ── Conversation history (short-term memory) ─────────────────
 chat_session = model.start_chat(history=[])
 
 
 def think(user_input):
     """
-    Sends user_input to Gemini and returns BREACH's response text.
-    Maintains conversation history automatically within the session.
+    Sends user input to Gemini with relevant memory injected.
+    Saves the exchange to long-term memory after every response.
     """
     try:
-        time.sleep(2)  # small buffer to avoid free tier rate limit
-        response = chat_session.send_message(user_input)
-        return response.text.strip()
+        # ── Inject relevant memories into prompt ─────────────
+        memory_context = recall_relevant(user_input)
+        preferences    = get_all_preferences()
+
+        # Build full prompt with memory context
+        if memory_context or preferences:
+            full_prompt = ""
+            if preferences:
+                full_prompt += f"What you know about the user:\n{preferences}\n\n"
+            if memory_context:
+                full_prompt += f"{memory_context}\n\n"
+            full_prompt += f"User just said: {user_input}"
+        else:
+            full_prompt = user_input
+
+        time.sleep(2)
+        response = chat_session.send_message(full_prompt)
+        reply    = response.text.strip()
+
+        # ── Save this exchange to memory ──────────────────────
+        save_conversation(user_input, reply)
+
+        return reply
 
     except Exception as e:
         error_msg = str(e)
-
-        # Rate limit hit — give a clean message instead of raw error
         if "429" in error_msg or "quota" in error_msg.lower():
-            return "I need a moment. Hit my rate limit — please wait a few seconds and try again."
-
+            return "Hit my rate limit — please wait a few seconds and try again."
         return f"I encountered an error: {error_msg}"
-
-
-if __name__ == "__main__":
-    print("Testing brain connection...")
-    reply = think("Hello BREACH, introduce yourself in one sentence.")
-    print(f"BREACH: {reply}")
-
-    reply2 = think("What did I just ask you?")
-    print(f"BREACH: {reply2}")

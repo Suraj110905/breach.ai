@@ -5,6 +5,7 @@
 
 import importlib
 from core.permissions import is_allowed
+from core.memory import save_preference
 
 SKILL_MAP = {
     "open":      "open_app",
@@ -25,6 +26,17 @@ def route(user_input, speak_fn, listen_fn):
     Returns (response, was_triggered)
     """
     text = user_input.lower()
+    
+    # ── Learn user's name ────────────────────────────────────
+    if "my name is" in text:
+        name = user_input.split("my name is")[-1].strip().split()[0]
+        save_preference("user_name", name)
+        return f"Got it. I'll remember your name is {name}.", True
+
+    # ── Learn user preferences ───────────────────────────────
+    if "i prefer" in text or "i like" in text or "i love" in text:
+        save_preference("preference", user_input)
+        return "Noted. I'll remember that.", True
 
     for keyword, skill_name in SKILL_MAP.items():
         if keyword in text:
