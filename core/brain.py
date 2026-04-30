@@ -4,6 +4,7 @@
 # ============================================================
 
 import os
+import time
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -23,12 +24,11 @@ Maximum 2-3 sentences unless the user asks for detail.
 
 # ── Load model ───────────────────────────────────────────────
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-2.0-flash",
     system_instruction=SYSTEM_PROMPT
 )
 
 # ── Conversation history (short-term memory) ─────────────────
-# Stores the current session's back-and-forth
 chat_session = model.start_chat(history=[])
 
 
@@ -38,19 +38,24 @@ def think(user_input):
     Maintains conversation history automatically within the session.
     """
     try:
+        time.sleep(2)  # small buffer to avoid free tier rate limit
         response = chat_session.send_message(user_input)
         return response.text.strip()
 
     except Exception as e:
-        return f"I encountered an error: {str(e)}"
+        error_msg = str(e)
+
+        # Rate limit hit — give a clean message instead of raw error
+        if "429" in error_msg or "quota" in error_msg.lower():
+            return "I need a moment. Hit my rate limit — please wait a few seconds and try again."
+
+        return f"I encountered an error: {error_msg}"
 
 
 if __name__ == "__main__":
-    # Quick test — ask BREACH something
     print("Testing brain connection...")
     reply = think("Hello BREACH, introduce yourself in one sentence.")
     print(f"BREACH: {reply}")
 
-    # Test memory — does it remember context?
     reply2 = think("What did I just ask you?")
     print(f"BREACH: {reply2}")
