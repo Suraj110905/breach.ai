@@ -19,3 +19,5 @@ long-term memory, permission-based system access, and an animated avatar UI.
 
 ## Architecture
 See docs/architecture.md (coming soon)
+
+##structure
