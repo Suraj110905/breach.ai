@@ -9,6 +9,13 @@ from dotenv import load_dotenv
 from core.voice import speak, listen
 from core.brain import think
 from core.skills_router import route
+import time
+from dotenv import load_dotenv
+from core.voice import speak, listen
+from core.brain import think
+from core.skills_router import route
+from core.state import set_state
+from ui.app import start_ui
 
 load_dotenv()
 
@@ -42,71 +49,52 @@ def check_environment():
     return all_good
 
 def main():
-    # ── Boot header ─────────────────────────────────────────
-    print()
-    print("  ██████╗ ██████╗ ███████╗ █████╗  ██████╗██╗  ██╗")
-    print("  ██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝██║  ██║")
-    print("  ██████╔╝██████╔╝█████╗  ███████║██║     ███████║")
-    print("  ██╔══██╗██╔══██╗██╔══╝  ██╔══██║██║     ██╔══██║")
-    print("  ██████╔╝██║  ██║███████╗██║  ██║╚██████╗██║  ██║")
-    print("  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝")
-    print()
-    print("  Personal AI Assistant — Boot Sequence")
-    print("  " + "─" * 44)
-    print()
+    # ── Start avatar UI ──────────────────────────────────────
+    start_ui()
+    time.sleep(1)  # give Flask a moment to start
 
-    # ── Phase 0: Environment check ───────────────────────────
-    log("INFO", "Phase 0 — Checking environment...")
-    env_ok = check_environment()
-
-    if not env_ok:
-        print()
-        log("ERROR", "Boot failed. Fix the issues above and retry.")
-        print()
-        sys.exit(1)
-
-    # ── All systems go ───────────────────────────────────────
+    # ── Boot confirmed ───────────────────────────────────────
     print()
     log("OK",   "All systems nominal")
     log("OK",   "Voice system ready")
+    log("OK",   "Avatar UI ready")
     print()
     print("  BREACH is ready.")
     print()
-    speak("BREACH online. How can I help you?")
-    # ── Conversation loop ────────────────────────────────────
-    speak("BREACH online. How can I help you?")
 
+    set_state("speaking")
+    speak("BREACH online. How can I help you?")
+    set_state("idle")
+
+    # ── Conversation loop ────────────────────────────────────
     while True:
+        set_state("listening")
         user_input = listen()
 
         if not user_input:
+            set_state("idle")
             continue
 
-        # Exit commands
         if any(word in user_input.lower() for word in ["goodbye", "bye", "exit", "quit", "shutdown"]):
+            set_state("speaking")
             speak("Shutting down. Goodbye.")
+            set_state("idle")
             break
 
-        # ── Try skills first ─────────────────────────────────
+        # Try skills first
         skill_response, was_triggered = route(user_input, speak, listen)
 
         if was_triggered:
+            set_state("speaking")
             speak(skill_response)
+            set_state("idle")
         else:
-            # No skill matched — send to Gemini brain
+            set_state("thinking")
             log("INFO", "Thinking...")
             response = think(user_input)
+            set_state("speaking")
             speak(response)
-
-        # Exit commands
-        if any(word in user_input.lower() for word in ["goodbye", "bye", "exit", "quit", "shutdown"]):
-            speak("Shutting down. Goodbye.")
-            break
-
-        # Think and respond
-        log("INFO", "Thinking...")
-        response = think(user_input)
-        speak(response)
+            set_state("idle")
     
 if __name__ == "__main__":
     main()
