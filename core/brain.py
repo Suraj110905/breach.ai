@@ -1,73 +1,102 @@
 # ============================================================
 # BREACH — core/brain.py
-# Thinking engine with long-term memory injection
+# Thinking engine using new google-genai SDK
 # ============================================================
 
 import os
 import time
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 from core.memory import recall_relevant, save_conversation, get_all_preferences
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# ── Setup client ─────────────────────────────────────────────
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
+# ── Model to use ─────────────────────────────────────────────
+MODEL = "gemini-2.0-flash"   # we will update this after seeing your model list
+
+# ── System prompt ────────────────────────────────────────────
 SYSTEM_PROMPT = """
 You are BREACH, a personal AI assistant running locally on the user's computer.
 You are sharp, efficient, and direct. You never waste words.
-You help with daily tasks, answer questions, and learn the user's preferences over time.
 Keep responses short and conversational — this is a voice assistant, not an essay writer.
 Maximum 2-3 sentences unless the user asks for detail.
-If you learn something personal about the user (name, preferences, habits), remember it.
 """
 
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash-8b",
-    system_instruction=SYSTEM_PROMPT
-)
-
-chat_session = model.start_chat(history=[])
+# ── Conversation history (short term memory) ─────────────────
+history = []
 
 
 def think(user_input):
     """
-    Sends user input to Gemini with automatic retry on rate limit.
+    Sends user input to Gemini and returns response.
+    Injects long term memory into every prompt.
+    Retries automatically on rate limit.
     """
+    global history
+
+    # ── Build prompt with memory context ─────────────────────
+    memory_context = recall_relevant(user_input)
+    preferences    = get_all_preferences()
+
+    full_prompt = ""
+    if preferences:
+        full_prompt += f"What you know about the user:\n{preferences}\n\n"
+    if memory_context:
+        full_prompt += f"{memory_context}\n\n"
+    full_prompt += f"User: {user_input}"
+
+    # ── Add to history ────────────────────────────────────────
+    history.append({"role": "user", "parts": [{"text": full_prompt}]})
+
     max_retries = 3
 
     for attempt in range(max_retries):
         try:
-            # Build prompt with memory context
-            memory_context = recall_relevant(user_input)
-            preferences    = get_all_preferences()
+            time.sleep(3)
 
-            if memory_context or preferences:
-                full_prompt = ""
-                if preferences:
-                    full_prompt += f"What you know about the user:\n{preferences}\n\n"
-                if memory_context:
-                    full_prompt += f"{memory_context}\n\n"
-                full_prompt += f"User just said: {user_input}"
-            else:
-                full_prompt = user_input
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=history,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    max_output_tokens=200,
+                    temperature=0.7,
+                )
+            )
 
-            time.sleep(4)
-            response = chat_session.send_message(full_prompt)
-            reply    = response.text.strip()
+            reply = response.text.strip()
 
+            # Save assistant reply to history
+            history.append({"role": "model", "parts": [{"text": reply}]})
+
+            # Keep history from growing too large (last 10 exchanges)
+            if len(history) > 20:
+                history = history[-20:]
+
+            # Save to long term memory
             save_conversation(user_input, reply)
+
             return reply
 
         except Exception as e:
             error_msg = str(e)
 
             if "429" in error_msg or "quota" in error_msg.lower():
-                wait_time = (attempt + 1) * 10
-                print(f"  [!] Rate limit hit — waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
-                time.sleep(wait_time)
+                wait = (attempt + 1) * 10
+                print(f"  [!] Rate limit — waiting {wait}s (attempt {attempt+1}/{max_retries})")
+                time.sleep(wait)
                 continue
 
-            return f"I encountered an error: {error_msg}"
+            return f"Error: {error_msg}"
 
-    return "I am still being rate limited. Please wait a minute and try again."
+    return "Still rate limited. Please wait a minute and try again."
+
+
+if __name__ == "__main__":
+    print("Testing brain...")
+    reply = think("Hello, introduce yourself in one sentence.")
+    print(f"BREACH: {reply}")
