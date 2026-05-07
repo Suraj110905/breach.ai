@@ -92,6 +92,8 @@ def main():
             set_state("thinking")
             log("INFO", "Thinking...")
             response = think(user_input)
+            response = think(user_input)
+            print(f"  [DEBUG] Gemini replied: {response}")
             set_state("speaking")
             speak(response)
             set_state("idle")

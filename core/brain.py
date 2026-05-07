@@ -23,7 +23,7 @@ If you learn something personal about the user (name, preferences, habits), reme
 """
 
 model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash",
+    model_name="gemini-1.5-flash-8b",
     system_instruction=SYSTEM_PROMPT
 )
 
@@ -32,36 +32,42 @@ chat_session = model.start_chat(history=[])
 
 def think(user_input):
     """
-    Sends user input to Gemini with relevant memory injected.
-    Saves the exchange to long-term memory after every response.
+    Sends user input to Gemini with automatic retry on rate limit.
     """
-    try:
-        # ── Inject relevant memories into prompt ─────────────
-        memory_context = recall_relevant(user_input)
-        preferences    = get_all_preferences()
+    max_retries = 3
 
-        # Build full prompt with memory context
-        if memory_context or preferences:
-            full_prompt = ""
-            if preferences:
-                full_prompt += f"What you know about the user:\n{preferences}\n\n"
-            if memory_context:
-                full_prompt += f"{memory_context}\n\n"
-            full_prompt += f"User just said: {user_input}"
-        else:
-            full_prompt = user_input
+    for attempt in range(max_retries):
+        try:
+            # Build prompt with memory context
+            memory_context = recall_relevant(user_input)
+            preferences    = get_all_preferences()
 
-        time.sleep(2)
-        response = chat_session.send_message(full_prompt)
-        reply    = response.text.strip()
+            if memory_context or preferences:
+                full_prompt = ""
+                if preferences:
+                    full_prompt += f"What you know about the user:\n{preferences}\n\n"
+                if memory_context:
+                    full_prompt += f"{memory_context}\n\n"
+                full_prompt += f"User just said: {user_input}"
+            else:
+                full_prompt = user_input
 
-        # ── Save this exchange to memory ──────────────────────
-        save_conversation(user_input, reply)
+            time.sleep(4)
+            response = chat_session.send_message(full_prompt)
+            reply    = response.text.strip()
 
-        return reply
+            save_conversation(user_input, reply)
+            return reply
 
-    except Exception as e:
-        error_msg = str(e)
-        if "429" in error_msg or "quota" in error_msg.lower():
-            return "Hit my rate limit — please wait a few seconds and try again."
-        return f"I encountered an error: {error_msg}"
+        except Exception as e:
+            error_msg = str(e)
+
+            if "429" in error_msg or "quota" in error_msg.lower():
+                wait_time = (attempt + 1) * 10
+                print(f"  [!] Rate limit hit — waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
+                time.sleep(wait_time)
+                continue
+
+            return f"I encountered an error: {error_msg}"
+
+    return "I am still being rate limited. Please wait a minute and try again."
