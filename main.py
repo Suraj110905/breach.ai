@@ -31,8 +31,13 @@ def log(status, message):
     print(f"  [{symbol}] {message}")
 
 def check_environment():
+    """
+    Verifies all required environment variables exist.
+    Returns True if everything is fine, False if something is missing.
+    """
     all_good = True
 
+    # ── Check Gemini API key ──────────────────────────────────
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
@@ -46,6 +51,14 @@ def check_environment():
 
     else:
         log("OK", "Gemini API key loaded")
+
+    # ── Check Picovoice key (optional) ───────────────────────
+    pv_key = os.getenv("PICOVOICE_KEY")
+
+    if not pv_key or pv_key == "your_picovoice_key_here":
+        log("WARN", "PICOVOICE_KEY not set — wake word disabled, using direct listen mode")
+    else:
+        log("OK", "Picovoice wake word key loaded")
 
     return all_good
 
@@ -67,22 +80,32 @@ def main():
     speak("BREACH online. How can I help you?")
     set_state("idle")
 
-    # ── Conversation loop ────────────────────────────────────
+    # ── Conversation loop with wake word ─────────────────────
+    set_state("speaking")
+    speak("BREACH online. Say Computer to activate me.")
+    set_state("idle")
+
     while True:
+        # ── Wait for wake word ────────────────────────────────
+        set_state("idle")
+        wait_for_wake_word()
+
+        # ── Wake word heard — now listen for command ──────────
         set_state("listening")
+        speak("Yes?")
         user_input = listen()
 
         if not user_input:
-            set_state("idle")
             continue
 
+        # ── Exit commands ─────────────────────────────────────
         if any(word in user_input.lower() for word in ["goodbye", "bye", "exit", "quit", "shutdown"]):
             set_state("speaking")
             speak("Shutting down. Goodbye.")
             set_state("idle")
             break
 
-        # Try skills first
+        # ── Try skills first ──────────────────────────────────
         skill_response, was_triggered = route(user_input, speak, listen)
 
         if was_triggered:
@@ -90,11 +113,10 @@ def main():
             speak(skill_response)
             set_state("idle")
         else:
+            # ── Send to Gemini brain ──────────────────────────
             set_state("thinking")
             log("INFO", "Thinking...")
             response = think(user_input)
-            response = think(user_input)
-            print(f"  [DEBUG] Gemini replied: {response}")
             set_state("speaking")
             speak(response)
             set_state("idle")
