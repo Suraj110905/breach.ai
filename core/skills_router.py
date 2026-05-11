@@ -8,14 +8,24 @@ from core.permissions import is_allowed
 from core.memory import save_preference
 
 SKILL_MAP = {
-    "open":      "open_app",
-    "launch":    "open_app",
-    "search":    "web_search",
-    "google":    "web_search",
-    "look up":   "web_search",
-    "time":      "tell_time",
-    "date":      "tell_time",
-    "what day":  "tell_time",
+    # Existing
+    "open":          "open_app",
+    "launch":        "open_app",
+    "search":        "web_search",
+    "google":        "web_search",
+    "look up":       "web_search",
+    "time":          "tell_time",
+    "date":          "tell_time",
+    "what day":      "tell_time",
+
+    # New
+    "briefing":      "daily_briefing",
+    "good morning":  "daily_briefing",
+    "morning brief": "daily_briefing",
+    "study":         "study_mode",
+    "quiz me":       "study_mode",
+    "next question": "study_mode",
+    "learn":         "study_mode",
 }
 
 
