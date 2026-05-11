@@ -16,6 +16,7 @@ from core.brain import think
 from core.skills_router import route
 from core.state import set_state
 from ui.app import start_ui
+from core.wake import wait_for_wake_word
 
 load_dotenv()
 
