@@ -8,3 +8,5 @@ python-dotenv>=1.0.0
 pyyaml>=6.0
 requests>=2.31.0
 flask>=3.0.0
+pvporcupine>=3.0.0
+pvrecorder>=1.2.0

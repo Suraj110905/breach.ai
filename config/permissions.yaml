@@ -7,9 +7,11 @@
 # ============================================================
 
 skills:
-  tell_time:   allow
-  web_search:  allow
-  open_app:    ask
-  delete_file: deny
-  send_email:  ask
-  camera:      deny
+  tell_time:       allow
+  web_search:      allow
+  open_app:        ask
+  daily_briefing:  allow
+  study_mode:      allow
+  delete_file:     deny
+  send_email:      ask
+  camera:          deny
