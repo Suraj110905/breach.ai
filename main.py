@@ -1,24 +1,21 @@
-
 # ============================================================
 # BREACH — Personal AI Assistant
 # main.py — Entry point / system boot
-# ============================================================import os
+# ============================================================
+
 import os
 import sys
-from dotenv import load_dotenv
-from core.voice import speak, listen
-from core.brain import think
-from core.skills_router import route
 import time
 from dotenv import load_dotenv
 from core.voice import speak, listen
 from core.brain import think
 from core.skills_router import route
 from core.state import set_state
-from ui.app import start_ui
 from core.wake import wait_for_wake_word
+from ui.app import start_ui
 
 load_dotenv()
+
 
 def log(status, message):
     symbols = {
@@ -30,11 +27,8 @@ def log(status, message):
     symbol = symbols.get(status, "?")
     print(f"  [{symbol}] {message}")
 
+
 def check_environment():
-    """
-    Verifies all required environment variables exist.
-    Returns True if everything is fine, False if something is missing.
-    """
     all_good = True
 
     # ── Check Gemini API key ──────────────────────────────────
@@ -62,23 +56,41 @@ def check_environment():
 
     return all_good
 
+
 def main():
+    print()
+    print("  ██████╗ ██████╗ ███████╗ █████╗  ██████╗██╗  ██╗")
+    print("  ██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝██║  ██║")
+    print("  ██████╔╝██████╔╝█████╗  ███████║██║     ███████║")
+    print("  ██╔══██╗██╔══██╗██╔══╝  ██╔══██║██║     ██╔══██║")
+    print("  ██████╔╝██║  ██║███████╗██║  ██║╚██████╗██║  ██║")
+    print("  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝")
+    print()
+    print("  Personal AI Assistant — Boot Sequence")
+    print("  " + "─" * 44)
+    print()
+
+    # ── Phase 0: Environment check ───────────────────────────
+    log("INFO", "Phase 0 — Checking environment...")
+    env_ok = check_environment()
+
+    if not env_ok:
+        print()
+        log("ERROR", "Boot failed. Fix the issues above and retry.")
+        print()
+        sys.exit(1)
+
     # ── Start avatar UI ──────────────────────────────────────
     start_ui()
-    time.sleep(1)  # give Flask a moment to start
+    time.sleep(1)
 
-    # ── Boot confirmed ───────────────────────────────────────
     print()
     log("OK",   "All systems nominal")
     log("OK",   "Voice system ready")
-    log("OK",   "Avatar UI ready")
+    log("OK",   "Avatar UI ready — http://localhost:5000")
     print()
     print("  BREACH is ready.")
     print()
-
-    set_state("speaking")
-    speak("BREACH online. How can I help you?")
-    set_state("idle")
 
     # ── Conversation loop with wake word ─────────────────────
     set_state("speaking")
@@ -86,11 +98,9 @@ def main():
     set_state("idle")
 
     while True:
-        # ── Wait for wake word ────────────────────────────────
         set_state("idle")
         wait_for_wake_word()
 
-        # ── Wake word heard — now listen for command ──────────
         set_state("listening")
         speak("Yes?")
         user_input = listen()
@@ -98,14 +108,12 @@ def main():
         if not user_input:
             continue
 
-        # ── Exit commands ─────────────────────────────────────
         if any(word in user_input.lower() for word in ["goodbye", "bye", "exit", "quit", "shutdown"]):
             set_state("speaking")
             speak("Shutting down. Goodbye.")
             set_state("idle")
             break
 
-        # ── Try skills first ──────────────────────────────────
         skill_response, was_triggered = route(user_input, speak, listen)
 
         if was_triggered:
@@ -113,13 +121,13 @@ def main():
             speak(skill_response)
             set_state("idle")
         else:
-            # ── Send to Gemini brain ──────────────────────────
             set_state("thinking")
             log("INFO", "Thinking...")
             response = think(user_input)
             set_state("speaking")
             speak(response)
             set_state("idle")
-    
+
+
 if __name__ == "__main__":
     main()
