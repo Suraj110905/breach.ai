@@ -21,4 +21,4 @@ long-term memory, permission-based system access, and an animated avatar UI.
 See docs/architecture.md (coming soon)
 
 ##structure
-it will be based on full functionality 
+it will be based on full functional with automatic work done.
